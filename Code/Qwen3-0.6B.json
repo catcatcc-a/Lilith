@@ -6,7 +6,10 @@
         "quantization":{
             "load_in_8bit":false,
             "load_in_4bit":false
-        }
+        },
+        "use_context":false,
+        "trust_remote_code":true,
+        "use_safetensors":true
     },
     "generation":{
         "temperature":0.7,
