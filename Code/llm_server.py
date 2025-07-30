@@ -1,6 +1,10 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
+"""
+这个模块实现了调用本地大模型的功能，只需要一个配置文件就可以配置所有大模型需要的参数
+"""
+
 import json
-from typing import Optional,Dict,List
+
+from transformers import AutoModelForCausalLM, AutoTokenizer , GenerationConfig # 第三方库导入放在后面
 
 class LLMService :
     """
@@ -83,7 +87,6 @@ class LLMService :
 
         Args:
             user_input (str): the input text
-            use_context (bool): whether to use content or not
         """
         # 1. 构建输入（带或不带上下文）
         if self.model_config["use_context"]:
@@ -115,4 +118,3 @@ class LLMService :
             self.context.append({"role": "assistant", "content": response})
 
         return response
-
