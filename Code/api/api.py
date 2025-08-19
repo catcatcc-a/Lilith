@@ -1,11 +1,30 @@
 from fastapi import FastAPI, HTTPException, Depends
 from starlette.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, List, Dict
-import os
+from typing import List, Dict
+import os,functools
 
 from AutoKBAgent.chat_service import ChatService
 from AutoKBAgent.custom_llm import CustomLLM
+from AutoKBAgent.database import DatabaseManager
+
+# 配置文件路径（根据实际情况修改）
+LLM_CONFIG_PATH = f"F:\project\configs\Qwen3-0.6B.json"
+# 数据库路径
+database_manager_path = "chat_memory.db"
+
+db_manager = DatabaseManager(database_manager_path)
+
+def valid_user_id(func):
+    @functools.wraps(func)  # 新增：保留原函数的元信息（包括__name__）
+    def wrapper(*args, **kwargs):
+        request = kwargs.get("request")
+        if db_manager.user_exists(request.user_id):
+            return func(*args, **kwargs)
+        else:
+            raise HTTPException(status_code=404, detail=f"{request.user_id} not exist")
+    return wrapper
+
 
 # 初始化FastAPI应用
 app = FastAPI(title="AI聊天接口服务")
@@ -20,14 +39,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 配置文件路径（根据实际情况修改）
-LLM_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
+
 
 # 单例LLM和ChatService实例
 def get_chat_service():
     """依赖注入：获取ChatService实例"""
     llm = CustomLLM(config_path=LLM_CONFIG_PATH)
-    chat_service = ChatService(llm=llm)
+    chat_service = ChatService(llm=llm,db_path=database_manager_path)
     return chat_service
 
 # 请求模型定义
@@ -36,7 +54,7 @@ class RegisterRequest(BaseModel):
     password: str
 
 class LoginRequest(BaseModel):
-    username: str
+    user_id: str
     password: str
 
 class ChatRequest(BaseModel):
@@ -81,7 +99,7 @@ def login(
     chat_service: ChatService = Depends(get_chat_service)
 ):
     """用户登录接口"""
-    success, user_id = chat_service.login(request.username, request.password)
+    success, user_id = chat_service.login(request.user_id, request.password)
     if success:
         return {
             "success": True,
@@ -91,6 +109,7 @@ def login(
     raise HTTPException(status_code=401, detail="登录失败，用户名或密码错误")
 
 @app.post("/chat", response_model=Dict[str, str])
+@valid_user_id
 def chat(
     request: ChatRequest,
     chat_service: ChatService = Depends(get_chat_service)
@@ -110,19 +129,21 @@ def chat(
         raise HTTPException(status_code=500, detail=f"聊天处理失败: {str(e)}")
 
 @app.get("/history/{user_id}", response_model=List[Dict[str, str]])
+@valid_user_id
 def get_chat_history(
     user_id: str,
-    limit: int = 20,
+    hours_ago: float = 1,
     chat_service: ChatService = Depends(get_chat_service)
 ):
     """获取聊天历史记录"""
     try:
-        history = chat_service.get_chat_history(user_id, limit)
+        history = chat_service.get_chat_history(user_id, hours_ago)
         return history
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取历史记录失败: {str(e)}")
 
 @app.get("/user-summary/{user_id}", response_model=Dict[str, str])
+@valid_user_id
 def get_user_summary(
     user_id: str,
     chat_service: ChatService = Depends(get_chat_service)

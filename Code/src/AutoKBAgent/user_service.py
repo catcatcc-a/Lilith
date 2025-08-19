@@ -1,4 +1,4 @@
-import uuid  # 用于生成唯一的用户ID（UUID）
+import random
 import hashlib  # 用于对密码进行哈希加密（安全存储密码）
 from .database import DatabaseManager  # 导入数据库管理类，用于与数据库交互
 
@@ -19,6 +19,13 @@ class UserService:
         # 3. 将哈希结果转为十六进制字符串返回
         return hashlib.sha256(password.encode()).hexdigest()
 
+    def _generate_uuid(self):
+        while True:
+            uuid = random.randint(1, 999999)
+            if not self.db_manager.user_exists(str(uuid)):
+                return str(uuid)
+
+
     def register_user(self, username: str, password: str) -> tuple[bool, str]:
         """
         注册新用户
@@ -26,7 +33,7 @@ class UserService:
         返回：(是否成功, 用户ID)
         """
         # 生成唯一用户ID（UUIDv4格式，随机生成，全球唯一）
-        user_id = str(uuid.uuid4())
+        user_id = self._generate_uuid()
         # 调用私有方法对密码进行哈希处理
         password_hash = self._hash_password(password)
 
@@ -36,7 +43,7 @@ class UserService:
             return True, user_id
         return False, ""  # 失败场景：如用户名已存在等
 
-    def login_user(self, username: str, password: str) -> tuple[bool, str]:
+    def login_user(self, user_id: str, password: str) -> tuple[bool, str]:
         """
         用户登录验证
         流程：哈希输入密码 -> 与数据库中存储的哈希值比对
@@ -46,7 +53,7 @@ class UserService:
         password_hash = self._hash_password(password)
         # 调用数据库管理器的verify_user方法验证用户名和哈希密码
         # 若验证通过，返回对应的user_id；否则返回None
-        user_id = self.db_manager.verify_user(username, password_hash)
+        user_id = self.db_manager.verify_user(user_id, password_hash)
 
         # 如果验证成功，返回(True, 用户ID)；否则返回(False, 空字符串)
         if user_id:

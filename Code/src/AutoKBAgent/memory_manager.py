@@ -72,11 +72,11 @@ class MemoryManager:
         memory = self.llm.custom_pipeline(mixture_prompt)["output"]
         self.db_manager.save_user_summary(user_id, memory)
 
-    def get_recent_chat_history(self, user_id: str) -> List[dict]:
+    def get_recent_chat_history(self, user_id: str, hours_ago: float = 1) -> List[dict]:
         """
         代理调用数据库方法
         """
-        return dict_or_list_to_str(self.db_manager.get_recent_chat_history(user_id))
+        return dict_or_list_to_str(self.db_manager.get_recent_chat_history(user_id, hours_ago))
 
     def get_user_summary(self, user_id: str) -> str:
         """

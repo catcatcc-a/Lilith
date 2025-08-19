@@ -6,7 +6,7 @@ from .database import DatabaseManager  # 数据库管理
 
 
 class ChatService:
-    def __init__(self, llm: CustomLLM, db_path: str = "chat_memory.db"):
+    def __init__(self, llm: CustomLLM, db_path: str):
         # 初始化依赖组件
         self.llm = llm  # LLM实例
         self.db_manager = DatabaseManager(db_path)  # 数据库管理器
@@ -34,10 +34,13 @@ class ChatService:
         return self.user_service.register_user(username, password)
 
     def login(self, username: str, password: str) -> tuple[bool, str]:
-        """用户登录（代理调用用户服务）"""
+        """
+        用户登录（代理调用用户服务）
+        password是明文，在这里处理成hash_password
+        """
         return self.user_service.login_user(username, password)
 
-    def chat(self, user_id: str, user_input: str) -> str:
+    def chat(self, user_id: str, user_input: str) -> dict:
         """
         处理用户对话的完整流程
             用户输入
@@ -66,9 +69,9 @@ class ChatService:
         """
         self.memory_manager.generate_user_summary(user_id)
 
-    def get_chat_history(self, user_id: str, limit: int = 20) -> List[dict]:
+    def get_chat_history(self, user_id: str, hours_ago: float = 1) -> List[dict]:
         """获取用户对话历史（代理调用记忆管理器）"""
-        return self.memory_manager.get_recent_chat_history(user_id)
+        return self.memory_manager.get_recent_chat_history(user_id, hours_ago)
 
     def get_user_summary(self, user_id: str) -> str:
         """获取用户对话总结（代理调用记忆管理器）"""

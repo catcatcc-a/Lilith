@@ -1,17 +1,14 @@
 import sqlite3  # 导入SQLite数据库模块
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict  # 类型注解支持
-import os
-
-current_script_dir = os.path.dirname(os.path.abspath(__file__))
 
 class DatabaseManager:
     """
     这是一个使用sqlite3编写的轻量化管理数据库的模块
+    Args:
+        db_path：数据库的位置 -> str
     """
-    def __init__(self, db_path: str = "chat_memory.db"):
-        # 初始化数据库连接路径，默认创建chat_memory.db文件
-        # TODO:这里的存储路径要晚点要改一下
+    def __init__(self, db_path: str):
         self.db_path = db_path
         self._init_tables()  # 初始化数据表
 
