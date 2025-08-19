@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: AutoKBAgent
+Version: 0.1.0
+Summary: 自动化KB代理服务核心库
+Author: catcatcc
+Author-email: 3349848922@qq.com
+Requires-Python: >=3.10
+Dynamic: author
+Dynamic: author-email
+Dynamic: requires-python
+Dynamic: summary

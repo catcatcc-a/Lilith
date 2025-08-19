@@ -1,4 +1,3 @@
-# 导入所需模块
 import uuid  # 用于生成唯一的用户ID（UUID）
 import hashlib  # 用于对密码进行哈希加密（安全存储密码）
 from .database import DatabaseManager  # 导入数据库管理类，用于与数据库交互
