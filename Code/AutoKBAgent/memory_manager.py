@@ -1,8 +1,8 @@
 from typing import List, Dict, Optional  # 类型注解
 from datetime import datetime
-from database import DatabaseManager  # 数据库操作
-from custom_llm import CustomLLM  # 自定义LLM类
-from utils import dict_or_list_to_str
+from .database import DatabaseManager  # 数据库操作
+from .custom_llm import CustomLLM  # 自定义LLM类
+from .utils import dict_or_list_to_str
 
 
 class MemoryManager:
@@ -22,6 +22,7 @@ class MemoryManager:
     def save_message(self, user_id: str, response: Dict[str,str]) -> None:
         """
         保存单条对话消息（代理调用数据库方法）
+        这里的response是调用custom_llm库中的custom_pipeline函数得到的输出，不需要进行其他的处理
         每次生成完消息之后要调用
         """
         self.db_manager.save_chat_message(
@@ -48,11 +49,11 @@ class MemoryManager:
         chat_history = self.db_manager.get_recent_chat_history(user_id)
         str_chat = dict_or_list_to_str(chat_history)
         memory_prompt = str_chat+self.generate_memory_prompt
-        memory = self.llm._custom_pipeline(memory_prompt)["output"]
+        memory = self.llm.custom_pipeline(memory_prompt)["output"]
         self.db_manager.save_memory(user_id, memory)
 
 
-    def generate_user_summary(self, user_id: str) -> str:
+    def generate_user_summary(self, user_id: str) -> None:
         """
         根据新存在的对话，以及之前的对用户的印象，结合起来生成新的对用户的印象
         实现思路：
@@ -68,6 +69,17 @@ class MemoryManager:
         str_chat = dict_or_list_to_str(chat_history)
         old_memory = self.db_manager.get_user_summary(user_id)
         mixture_prompt = f"""历史对话：\n{str_chat}\n\n\n前一次对用户的印象：\n{old_memory}\n\n\n"""+self.generate_summary_prompt
-        memory = self.llm._custom_pipeline(mixture_prompt)["output"]
+        memory = self.llm.custom_pipeline(mixture_prompt)["output"]
         self.db_manager.save_user_summary(user_id, memory)
 
+    def get_recent_chat_history(self, user_id: str) -> List[dict]:
+        """
+        代理调用数据库方法
+        """
+        return dict_or_list_to_str(self.db_manager.get_recent_chat_history(user_id))
+
+    def get_user_summary(self, user_id: str) -> str:
+        """
+        代理调用数据库方法
+        """
+        return self.db_manager.get_user_summary(user_id)

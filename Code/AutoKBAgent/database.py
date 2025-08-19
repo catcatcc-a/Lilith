@@ -97,12 +97,12 @@ class DatabaseManager:
         except sqlite3.Error:
             return False
 
-    def verify_user(self, user_id: str, password_hash: str) -> bool:
+    def verify_user(self, user_id: str, password_hash: str) -> str:
         """
         验证用户身份
         :param user_id: 待验证的用户ID
         :param password_hash: 待验证的密码哈希
-        :return: 验证成功返回user_id，失败返回None
+        :return: 验证成功返回对应的user_id，失败返回None
         """
         # 使用with语句确保数据库连接自动关闭
         with sqlite3.connect(self.db_path) as conn:
@@ -113,10 +113,12 @@ class DatabaseManager:
                 (user_id, password_hash)  # 用user_id作为查询条件之一
             )
             # 获取查询结果（最多一条，因为user_id是主键唯一）
+            # 返回值的类型是tuple或者None
             result = cursor.fetchone()
 
-        # 如果有匹配的记录，返回对应的True；否则返回False
-        return result is not None
+        # 如果有匹配的记录，返回查询到的user_id；否则返回None
+        # result是一个元组（如(user_id,)），取第一个元素即为user_id
+        return result[0] if result else None
 
     def save_chat_message(self, user_id: str, role: str, content: str, message_time: str) -> None:
         """保存单条对话消息（用户或助手）"""

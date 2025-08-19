@@ -26,7 +26,7 @@ class CustomLLM(LLM):
         self._large_language_model = LLMService(self._config_path)
 
     # 包装自定义的LLM接口
-    def _custom_pipeline(self,input_text: str):
+    def custom_pipeline(self,input_text: str):
         """
         这个是一个包装自定义LLM接口的函数
 
@@ -44,7 +44,7 @@ class CustomLLM(LLM):
     def _llm_type(self) -> str:
         return "custom"
 
-    def _call(self, prompt :str, stop: Optional[List[str]] = None,**kwargs) -> dict:
+    def _call(self, prompt :str, stop: Optional[List[str]] = None,**kwargs) -> str:
         """
         Args：
             prompt -> 用户的输入
@@ -52,7 +52,7 @@ class CustomLLM(LLM):
 
         Output：纯净的LLM输出
         """
-        result = self._custom_pipeline(prompt)["output"]
+        result = self.custom_pipeline(prompt)["output"]
         # 如果需要处理停止词，可以在这里添加逻辑
         if stop is not None:
             for s in stop:

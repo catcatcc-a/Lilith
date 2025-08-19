@@ -1,8 +1,14 @@
 setup.py
 AutoKBAgent/__init__.py
+AutoKBAgent/api.py
+AutoKBAgent/chat_service.py
 AutoKBAgent/custom_llm.py
+AutoKBAgent/database.py
 AutoKBAgent/document.py
 AutoKBAgent/llm_server.py
+AutoKBAgent/memory_manager.py
+AutoKBAgent/user_service.py
+AutoKBAgent/utils.py
 AutoKBAgent.egg-info/PKG-INFO
 AutoKBAgent.egg-info/SOURCES.txt
 AutoKBAgent.egg-info/dependency_links.txt
