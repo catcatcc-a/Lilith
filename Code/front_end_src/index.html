@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI聊天系统 - 登录</title>
+  <!-- 引入外部资源 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  
+  <!-- Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4f46e5', // 主色调：深靛蓝（高级感）
+            secondary: '#818cf8', // 辅助色：淡紫蓝
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .card-shadow {
+        box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.1);
+      }
+      .input-focus {
+        @apply focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen font-inter">
+  <div class="container mx-auto px-4 py-20">
+    <!-- 登录卡片 -->
+    <div class="max-w-md mx-auto bg-white rounded-2xl p-8 card-shadow">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
+          <i class="fa fa-comments text-2xl"></i>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800">AI聊天助手</h1>
+        <p class="text-gray-500 mt-2">请登录后开始聊天</p>
+      </div>
+
+      <!-- 错误提示 -->
+      <div id="error-message" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+        <i class="fa fa-exclamation-circle mr-2"></i><span id="error-text"></span>
+      </div>
+
+      <!-- 登录表单 -->
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label for="user_id" class="block text-sm font-medium text-gray-700 mb-1">用户ID</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+              <i class="fa fa-user"></i>
+            </div>
+            <input 
+              type="text" 
+              id="user_id" 
+              name="user_id" 
+              required
+              class="w-full pl-10 py-2.5 border border-gray-300 rounded-lg input-focus transition-all"
+              placeholder="请输入用户ID"
+            >
+          </div>
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+              <i class="fa fa-lock"></i>
+            </div>
+            <input 
+              type="password" 
+              id="password" 
+              name="password" 
+              required
+              class="w-full pl-10 py-2.5 border border-gray-300 rounded-lg input-focus transition-all"
+              placeholder="请输入密码"
+            >
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          class="w-full bg-primary text-white py-2.5 rounded-lg hover:bg-primary/90 transition-all font-medium flex items-center justify-center"
+        >
+          <i class="fa fa-sign-in mr-2"></i>登录
+        </button>
+      </form>
+
+      <!-- 注册链接 -->
+      <div class="mt-6 text-center">
+        <p class="text-gray-600">还没有账号？ 
+          <a href="register.html" class="text-primary hover:text-primary/80 font-medium transition-colors">立即注册</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 登录逻辑 -->
+  <script src="js/api.js"></script>
+  <script>
+    // 检查是否已登录，若已登录直接跳转聊天页
+    if (userStore.getUser()) {
+      window.location.href = "chat.html";
+    }
+
+    // 登录表单提交
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userId = document.getElementById('user_id').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const errorEl = document.getElementById('error-message');
+      const errorTextEl = document.getElementById('error-text');
+
+      try {
+        // 调用 FastAPI 的登录接口
+        const response = await api.login(userId, password);
+        if (response.success) {
+          // 登录成功，保存用户信息并跳转聊天页
+          userStore.setUser({ id: response.user_id });
+          window.location.href = "chat.html";
+        } else {
+          throw new Error("登录失败，请检查账号密码");
+        }
+      } catch (err) {
+        // 显示错误信息（对接 FastAPI 返回的错误详情）
+        const errorMsg = err.response?.data?.detail || err.message;
+        errorTextEl.textContent = errorMsg;
+        errorEl.classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

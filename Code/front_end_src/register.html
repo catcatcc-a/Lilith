@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI聊天系统 - 注册</title>
+  <!-- 引入外部资源 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  
+  <!-- 复用登录页的 Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4f46e5',
+            secondary: '#818cf8',
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .card-shadow {
+        box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.1);
+      }
+      .input-focus {
+        @apply focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen font-inter">
+  <div class="container mx-auto px-4 py-20">
+    <div class="max-w-md mx-auto bg-white rounded-2xl p-8 card-shadow">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
+          <i class="fa fa-user-plus text-2xl"></i>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800">创建账号</h1>
+        <p class="text-gray-500 mt-2">注册后即可使用AI聊天服务</p>
+      </div>
+
+      <!-- 错误/成功提示 -->
+      <div id="message" class="hidden px-4 py-3 rounded-lg mb-4">
+        <i class="fa fa-info-circle mr-2"></i><span id="message-text"></span>
+      </div>
+
+      <!-- 注册表单 -->
+      <form id="register-form" class="space-y-4">
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+              <i class="fa fa-user-circle"></i>
+            </div>
+            <input 
+              type="text" 
+              id="username" 
+              name="username" 
+              required
+              class="w-full pl-10 py-2.5 border border-gray-300 rounded-lg input-focus transition-all"
+              placeholder="请设置用户名"
+            >
+          </div>
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+              <i class="fa fa-lock"></i>
+            </div>
+            <input 
+              type="password" 
+              id="password" 
+              name="password" 
+              required
+              class="w-full pl-10 py-2.5 border border-gray-300 rounded-lg input-focus transition-all"
+              placeholder="请设置密码（至少6位）"
+            >
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          class="w-full bg-primary text-white py-2.5 rounded-lg hover:bg-primary/90 transition-all font-medium flex items-center justify-center"
+        >
+          <i class="fa fa-check mr-2"></i>注册
+        </button>
+      </form>
+
+      <!-- 登录链接 -->
+      <div class="mt-6 text-center">
+        <p class="text-gray-600">已有账号？ 
+          <a href="index.html" class="text-primary hover:text-primary/80 font-medium transition-colors">立即登录</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 注册逻辑 -->
+  <script src="js/api.js"></script>
+  <script>
+    // 注册表单提交
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const messageEl = document.getElementById('message');
+      const messageTextEl = document.getElementById('message-text');
+
+      // 简单前端验证
+      if (password.length < 6) {
+        messageEl.className = 'bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-lg mb-4';
+        messageTextEl.textContent = '密码长度至少6位';
+        messageEl.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        // 调用 FastAPI 的注册接口
+        const response = await api.register(username, password);
+        if (response.success) {
+          // 注册成功，跳转到新页面显示user_id
+          window.location.href = `show_user_id.html?user_id=${response.user_id}`;
+        }
+      } catch (err) {
+        // 显示错误信息
+        const errorMsg = err.response?.data?.detail || '注册失败，请重试';
+        messageEl.className = 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4';
+        messageTextEl.textContent = errorMsg;
+        messageEl.classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

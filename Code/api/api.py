@@ -4,12 +4,14 @@ from pydantic import BaseModel
 from typing import List, Dict
 import os,functools
 
+from starlette.staticfiles import StaticFiles
+
 from AutoKBAgent.chat_service import ChatService
 from AutoKBAgent.custom_llm import CustomLLM
 from AutoKBAgent.database import DatabaseManager
 
 # 配置文件路径（根据实际情况修改）
-LLM_CONFIG_PATH = f"F:\project\configs\Qwen3-0.6B.json"
+LLM_CONFIG_PATH = f"F:\project\Lilith\Config\Qwen3-0.6B.json"
 # 数据库路径
 database_manager_path = "chat_memory.db"
 
@@ -39,7 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+app.mount("/frontend", StaticFiles(directory=r"F:\project\Lilith\Code\front_end_src", html=True), name="front_end_src")
 
 # 单例LLM和ChatService实例
 def get_chat_service():
@@ -60,6 +62,13 @@ class LoginRequest(BaseModel):
 class ChatRequest(BaseModel):
     user_id: str
     input_text: str
+
+class HistoryRequest(BaseModel):
+    user_id: str
+    hours_ago : float = 1
+
+class UserSummaryRequest(BaseModel):
+    user_id: str
 
 # 响应模型定义
 class RegisterResponse(BaseModel):
@@ -131,13 +140,12 @@ def chat(
 @app.get("/history/{user_id}", response_model=List[Dict[str, str]])
 @valid_user_id
 def get_chat_history(
-    user_id: str,
-    hours_ago: float = 1,
+    request: HistoryRequest,
     chat_service: ChatService = Depends(get_chat_service)
 ):
     """获取聊天历史记录"""
     try:
-        history = chat_service.get_chat_history(user_id, hours_ago)
+        history = chat_service.get_chat_history(request.user_id, request.hours_ago)
         return history
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取历史记录失败: {str(e)}")
@@ -145,14 +153,14 @@ def get_chat_history(
 @app.get("/user-summary/{user_id}", response_model=Dict[str, str])
 @valid_user_id
 def get_user_summary(
-    user_id: str,
+    request: UserSummaryRequest,
     chat_service: ChatService = Depends(get_chat_service)
 ):
     """获取用户总结信息"""
     try:
-        summary = chat_service.get_user_summary(user_id)
+        summary = chat_service.get_user_summary(request.user_id)
         return {
-            "user_id": user_id,
+            "user_id": request.user_id,
             "summary": summary
         }
     except Exception as e:

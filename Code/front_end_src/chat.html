@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI聊天系统 - 对话</title>
+  <!-- 引入外部资源 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  
+  <!-- Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4f46e5',
+            secondary: '#818cf8',
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .chat-shadow {
+        box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.05);
+      }
+      .message-hover {
+        transition: transform 0.2s ease;
+      }
+      .message-hover:hover {
+        transform: translateY(-1px);
+      }
+      .scrollbar-hide {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-inter">
+  <!-- 导航栏 -->
+  <nav class="bg-white shadow-sm fixed top-0 left-0 right-0 z-10">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <i class="fa fa-comments text-primary text-xl"></i>
+        <span class="font-bold text-gray-800">AI聊天助手</span>
+      </div>
+      <div class="flex items-center space-x-4">
+        <span id="user-id-display" class="text-gray-600 text-sm hidden md:inline"></span>
+        <button id="logout-btn" class="text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-sign-out mr-1"></i><span class="hidden md:inline">退出</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 聊天容器 -->
+  <div class="container mx-auto px-4 pt-20 pb-10">
+    <div class="max-w-2xl mx-auto mt-6">
+      <!-- 聊天窗口 -->
+      <div class="bg-white rounded-t-xl p-4 h-[70vh] overflow-y-auto scrollbar-hide chat-shadow">
+        <div id="chat-messages" class="space-y-4 pb-4">
+          <!-- 加载历史消息 -->
+          <div class="flex justify-center py-4">
+            <div class="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 输入区域 -->
+      <div class="bg-white rounded-b-xl p-4 chat-shadow border-t border-gray-100">
+        <form id="chat-form" class="flex gap-2">
+          <input 
+            type="text" 
+            id="message-input" 
+            placeholder="输入消息..." 
+            class="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+            autocomplete="off"
+          >
+          <button 
+            type="submit" 
+            class="bg-primary text-white px-5 py-3 rounded-lg hover:bg-primary/90 transition-all flex items-center justify-center"
+          >
+            <i class="fa fa-paper-plane"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 聊天逻辑 -->
+  <script src="js/api.js"></script>
+  <script>
+    // 检查登录状态
+    const user = userStore.getUser();
+    if (!user) {
+      window.location.href = "index.html";
+    }
+    // 显示用户ID
+    document.getElementById('user-id-display').textContent = `用户ID: ${user.id}`;
+
+    // 退出登录
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      userStore.logout();
+      window.location.href = "index.html";
+    });
+
+    // 页面加载时获取历史消息
+    async function loadHistory() {
+      try {
+        const history = await api.getChatHistory(user.id, 24); // 获取24小时内历史
+        const messagesContainer = document.getElementById('chat-messages');
+        messagesContainer.innerHTML = ''; // 清空加载动画
+        
+        if (history.length === 0) {
+          // 无历史消息时显示欢迎语
+          addMessage('你好！我是你的AI助手，有什么我可以帮你的吗？', 'ai');
+          return;
+        }
+        
+        // 渲染历史消息
+        history.forEach(msg => {
+          addMessage(msg.content, msg.role);
+        });
+      } catch (err) {
+        console.error('加载历史消息失败:', err);
+        const messagesContainer = document.getElementById('chat-messages');
+        messagesContainer.innerHTML = '';
+        addMessage('加载历史消息失败', 'ai', true);
+      }
+    }
+
+    // 添加消息到聊天窗口
+    function addMessage(content, role, isError = false) {
+      const messagesContainer = document.getElementById('chat-messages');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `flex items-start message-hover ${role === 'user' ? 'justify-end' : ''}`;
+      
+      if (role === 'user') {
+        // 用户消息（靠右）
+        messageDiv.innerHTML = `
+          <div class="max-w-[75%] bg-primary/10 text-gray-800 rounded-lg rounded-tr-none px-4 py-3 message-hover">
+            <p>${content}</p>
+          </div>
+          <div class="ml-2 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+            <i class="fa fa-user text-gray-600"></i>
+          </div>
+        `;
+      } else {
+        // AI消息（靠左）
+        messageDiv.innerHTML = `
+          <div class="mr-2 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0">
+            <i class="fa fa-robot"></i>
+          </div>
+          <div class="max-w-[75%] bg-gray-100 ${isError ? 'bg-red-50 border border-red-100' : ''} rounded-lg rounded-tl-none px-4 py-3 message-hover">
+            <p class="${isError ? 'text-red-700' : 'text-gray-800'}">${content}</p>
+          </div>
+        `;
+      }
+      
+      messagesContainer.appendChild(messageDiv);
+      // 滚动到底部
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // 发送消息
+    document.getElementById('chat-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const inputEl = document.getElementById('message-input');
+      const content = inputEl.value.trim();
+      if (!content) return;
+
+      // 清空输入框并添加用户消息
+      inputEl.value = '';
+      addMessage(content, 'user');
+
+      try {
+        // 显示"正在输入"提示
+        const typingDiv = document.createElement('div');
+        typingDiv.id = 'typing-indicator';
+        typingDiv.className = 'flex items-start message-hover';
+        typingDiv.innerHTML = `
+          <div class="mr-2 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0">
+            <i class="fa fa-robot"></i>
+          </div>
+          <div class="max-w-[75%] bg-gray-100 rounded-lg rounded-tl-none px-4 py-3">
+            <p class="text-gray-500">正在输入...</p>
+          </div>
+        `;
+        document.getElementById('chat-messages').appendChild(typingDiv);
+        document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+
+        // 调用 FastAPI 的聊天接口
+        const response = await api.sendMessage(user.id, content);
+        
+        // 移除"正在输入"提示，添加AI回复
+        document.getElementById('typing-indicator').remove();
+        addMessage(response.response, 'ai');
+      } catch (err) {
+        // 移除"正在输入"提示，显示错误
+        const typingEl = document.getElementById('typing-indicator');
+        if (typingEl) typingEl.remove();
+        addMessage('发送失败，请重试', 'ai', true);
+        console.error('发送消息失败:', err);
+      }
+    });
+
+    // 页面加载时加载历史消息
+    loadHistory();
+  </script>
+</body>
+</html>
