@@ -4,8 +4,17 @@
 
 import json
 import gc
+import threading
+from typing import Dict, List, Generator, Any, Optional
 
-from transformers import AutoModelForCausalLM, AutoTokenizer , GenerationConfig # 第三方库导入放在后面
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    GenerationConfig,
+    TextIteratorStreamer,
+    PreTrainedModel,
+    PreTrainedTokenizerBase
+)
 import torch
 
 class LLMService :
@@ -13,7 +22,7 @@ class LLMService :
     this is a class encapsulate model loading and inference functions
     every config is stored in config.json
     """
-    def __init__(self,config_path:str):
+    def __init__(self,config_path:str)->None:
         """initialize the model
         Args:
             the path of config file
@@ -27,7 +36,7 @@ class LLMService :
 
         self.context = [] #存储对话上下文
 
-    def __del__(self):
+    def __del__(self)->None:
         """
         析构函数：在实例被销毁时释放资源，适配Accelerate管理的模型
         """
@@ -77,7 +86,7 @@ class LLMService :
         print("LLMService 实例已销毁，相关资源已释放\n")
 
 
-    def _model_config(self) -> dict:
+    def _model_config(self) -> Dict[str, Any]:
         """
         根据配置文件加载所有model相关的配置
         output：字典
@@ -91,7 +100,7 @@ class LLMService :
             _ = config["model"]
             return _
 
-    def _generation(self) -> dict:
+    def _generation(self) -> Dict[str, Any]:
         """
         根据配置文件加载所有generation相关的配置
         output：字典
@@ -147,7 +156,7 @@ class LLMService :
         return model, tokenizer, generation_config
 
 
-    def build_prompt_with_context(self):
+    def build_prompt_with_context(self) -> str:
         """
         在要使用上下文的前提下构建模型的上下文
         是否使用上下文应该在模型的配置文件中设置
@@ -162,7 +171,10 @@ class LLMService :
         prompt += "assistant: "
         return prompt
 
-    def generate_response(self, user_input: str):
+    def generate_response(self, user_input: str) -> Dict[str, str]:
+        """
+        生成llm的回答，不是流式输出
+        """
         current_input = user_input
 
         # 构建prompt（记录原始prompt文本，用于后续剥离）
@@ -223,3 +235,75 @@ class LLMService :
             "input": current_input,
             "output": current_output
         }
+
+    def generate_stream(self, user_input: str) -> Generator[str, None, None]:
+        """
+        流式输出llm的回答
+        input:
+            user_input:用户的输入
+        output：
+            生成器对象，需要迭代这个函数才会启动，并且我们只输出llm的回答
+        上下文需要通过llm对象来访问
+        """
+        current_input = user_input
+
+        # 复用上下文构建逻辑
+        if self.model_config["use_context"]:
+            self.context.append({"role": "user", "content": current_input})
+            prompt = self.build_prompt_with_context()
+        else:
+            prompt = current_input
+        original_prompt = prompt
+
+        # 复用输入编码逻辑
+        inputs = self.tokenizer(
+            prompt,
+            return_tensors="pt",
+            truncation=True,
+        ).to(self.model.device)
+
+        # 初始化流式输出器
+        streamer = TextIteratorStreamer(
+            self.tokenizer,
+            skip_special_tokens=True,
+            timeout=10.0,
+            clean_up_tokenization_spaces=True
+        )
+
+        # 生成参数（复用现有生成配置）
+        generate_kwargs = {
+            **inputs,
+            "streamer": streamer,
+            "generation_config": self.generation_config,
+            "max_new_tokens": self.generation_config.max_new_tokens
+        }
+
+        # 启动生成线程
+        thread = threading.Thread(
+            target=self.model.generate,
+            kwargs=generate_kwargs,
+            daemon=True  # 确保线程随主线程退出
+        )
+        thread.start()
+
+        # 处理流式输出
+        full_output = []
+        original_prompt_stripped = original_prompt.strip()
+        is_first_chunk = True
+
+        for new_text in streamer:
+            if is_first_chunk:
+                # 复用prompt剥离逻辑
+                full_output_text = (''.join(full_output) + new_text).strip()
+                if full_output_text.startswith(original_prompt_stripped):
+                    new_text = full_output_text[len(original_prompt_stripped):].strip()
+                is_first_chunk = False
+
+            if new_text:
+                full_output.append(new_text)
+                yield new_text  # 实时返回片段
+
+        # 复用上下文更新逻辑
+        current_output = ''.join(full_output).strip()
+        if self.model_config["use_context"]:
+            self.context.append({"role": "assistant", "content": current_output})
