@@ -1,7 +1,7 @@
 {
     "model":{
         "name":"Qwen3-0.6B",
-        "path":"F:\\project\\ChemBench\\models\\Qwen3-0.6B",
+        "path":"F:/project/ChemBench/models/Qwen3-0.6B",
         "device":"auto",
         "quantization":{
             "load_in_8bit":false,

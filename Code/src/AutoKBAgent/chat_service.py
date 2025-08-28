@@ -1,4 +1,6 @@
 from typing import List, Dict, Optional  # 类型注解
+from pathlib import Path
+
 from .custom_llm import CustomLLM  # 自定义LLM
 from .user_service import UserService  # 用户服务
 from .memory_manager import MemoryManager  # 记忆管理
@@ -9,7 +11,7 @@ class ChatService:
     def __init__(self, llm: CustomLLM, db_path: str):
         # 初始化依赖组件
         self.llm = llm  # LLM实例
-        self.db_manager = DatabaseManager(db_path)  # 数据库管理器
+        self.db_manager = DatabaseManager( str(Path(db_path).resolve()) )  # 数据库管理器
         self.user_service = UserService(self.db_manager)  # 用户服务
         self.memory_manager = MemoryManager(self.db_manager, llm)  # 记忆管理器
         # 对话提示模板：指导LLM基于上下文生成回复

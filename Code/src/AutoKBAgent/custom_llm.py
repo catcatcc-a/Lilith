@@ -4,6 +4,7 @@
 
 from typing import Optional, List, Mapping, Any
 from pydantic import PrivateAttr
+from pathlib import Path
 
 from langchain.llms.base import LLM
 
@@ -21,7 +22,7 @@ class CustomLLM(LLM):
 
     def __init__(self, config_path: str):
         super().__init__()  # 不需要向父类传递config_path
-        self._config_path = config_path  # 赋值给私有属性
+        self._config_path = str(Path(config_path).resolve())  # 赋值给私有属性
         # 初始化模型服务
         self._large_language_model = LLMService(self._config_path)
 

@@ -1,6 +1,7 @@
 import sqlite3  # 导入SQLite数据库模块
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict  # 类型注解支持
+from pathlib import Path
 
 class DatabaseManager:
     """
@@ -9,7 +10,7 @@ class DatabaseManager:
         db_path：数据库的位置 -> str
     """
     def __init__(self, db_path: str):
-        self.db_path = db_path
+        self.db_path = str(Path(db_path).resolve())
         self._init_tables()  # 初始化数据表
 
     def _init_tables(self):

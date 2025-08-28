@@ -6,28 +6,32 @@ import json
 import gc
 import threading
 from typing import Dict, List, Generator, Any, Optional
+from pathlib import Path
 
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     GenerationConfig,
-    TextIteratorStreamer,
-    PreTrainedModel,
-    PreTrainedTokenizerBase
+    TextIteratorStreamer
 )
 import torch
 
 class LLMService :
     """
-    this is a class encapsulate model loading and inference functions
-    every config is stored in config.json
+    这是一个封装了模型加载与推理功能的类，所有配置均存储在 config.json 文件中
+    Args:
+        config_path: 这个参数只需要传入当前系统下配置文件的绝对路径就可以了
+
+    Attention:
+        配置文件中 “model.path” 这个变量在windows和linux系统中都应该使用 “/” 作为路径的分隔符而不是 “\”
     """
     def __init__(self,config_path:str)->None:
-        """initialize the model
+        """
+        初始化模型
         Args:
-            the path of config file
-            """
-        self.config_path = config_path
+            config_path: 这个参数只需要传入当前系统下配置文件的绝对路径就可以了
+        """
+        self.config_path = str(Path(config_path).resolve())
 
         self.model_config = self._model_config()
         self.generation = self._generation()
@@ -115,11 +119,16 @@ class LLMService :
             return _
 
     def _load_model(self):
-        """加载模型和分词器（可能抛出多种错误，由上层try-except捕获）"""
+        """
+        加载模型和分词器（可能抛出多种错误，由上层try-except捕获）
+        """
+        # 处理路径问题
+        model_path = str(Path(self.model_config["path"]).resolve())
+
         # 1. 加载分词器（单独捕获分词器加载错误）
         try:
             tokenizer = AutoTokenizer.from_pretrained(
-                self.model_config["path"],
+                model_path,
                 local_files_only=True
             )
             print("分词器加载成功")
@@ -128,7 +137,7 @@ class LLMService :
 
         # 2. 加载生成配置（单独捕获生成配置错误）
         try:
-            generation_config = GenerationConfig.from_pretrained(self.model_config["path"])
+            generation_config = GenerationConfig.from_pretrained(model_path)
             # 更新生成参数
             generation_config.max_new_tokens = self.generation.get("max_new_tokens", 512)
             generation_config.temperature = self.generation.get("temperature", 0.7)
@@ -141,7 +150,7 @@ class LLMService :
         # 3. 加载模型（单独捕获模型加载错误）
         try:
             model = AutoModelForCausalLM.from_pretrained(
-                self.model_config["path"],
+                model_path,
                 device_map=self.model_config.get("device", "auto"),  # 允许配置默认值
                 trust_remote_code=self.model_config.get("trust_remote_code", False),
                 use_safetensors=self.model_config.get("use_safetensors", True)

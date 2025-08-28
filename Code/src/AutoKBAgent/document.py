@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from langchain.document_loaders import PyPDFLoader, TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.prompts import PromptTemplate
@@ -11,7 +13,7 @@ class Book :
     这个类用于实现对文档的操作
     """
     def __init__(self, file_path:str, llm:custom_llm.CustomLLM = None):
-        self.file_path = file_path
+        self.file_path = str(Path(file_path).resolve())
         self.llm = llm
 
         #Document这个类存储了一段文本及其相关元数据的类，可以用page_content属性来访问
