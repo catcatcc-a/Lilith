@@ -1,8 +1,16 @@
+"""
+关于文件路径：
+    llm_config_path这个变量是模型配置文件的绝对路径，在代码的使用中使用的变量是LLM_CONFIG_PATH，而LLM_CONFIG_PATH是使用pathlib.Path处理过的llm_config_path,不需要考虑其他问题
+    database_manager_path和DATABASE_MANAGER_PATH同理
+    对前端静态资源的管理部分，这里使用的是相对路径 -> app.mount("/frontend", StaticFiles(directory = str(FRONTEND_DIR), html=True), name="front_end_src")
+"""
+
 from fastapi import FastAPI, HTTPException, Depends
 from starlette.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict
 import os,functools
+from pathlib import Path
 
 from starlette.staticfiles import StaticFiles
 
@@ -11,11 +19,21 @@ from AutoKBAgent.custom_llm import CustomLLM
 from AutoKBAgent.database import DatabaseManager
 
 # 配置文件路径（根据实际情况修改）
-LLM_CONFIG_PATH = f"F:\project\Lilith\Config\Qwen3-0.6B.json"
+llm_config_path = f"F:\project\Lilith\Config\Qwen3-0.6B.json"
+LLM_CONFIG_PATH = str(Path(llm_config_path).resolve())
+
 # 数据库路径
 database_manager_path = "chat_memory.db"
+DATABASE_MANAGER_PATH = str(Path(database_manager_path).resolve())
 
-db_manager = DatabaseManager(database_manager_path)
+#前端资源路径
+current_dir = Path(__file__).resolve().parent
+FRONTEND_DIR = current_dir.parent / "front_end_src"
+# 确保目录存在
+if not FRONTEND_DIR.exists():
+    raise FileNotFoundError(f"前端资源目录不存在: {FRONTEND_DIR}")
+
+db_manager = DatabaseManager(DATABASE_MANAGER_PATH)
 
 def valid_user_id(func):
     @functools.wraps(func)  # 新增：保留原函数的元信息（包括__name__）
@@ -41,13 +59,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/frontend", StaticFiles(directory=r"F:\project\Lilith\Code\front_end_src", html=True), name="front_end_src")
+app.mount("/frontend", StaticFiles(directory = str(FRONTEND_DIR), html=True), name="front_end_src")
 
 # 单例LLM和ChatService实例
 def get_chat_service():
     """依赖注入：获取ChatService实例"""
     llm = CustomLLM(config_path=LLM_CONFIG_PATH)
-    chat_service = ChatService(llm=llm,db_path=database_manager_path)
+    chat_service = ChatService(llm=llm,db_path = DATABASE_MANAGER_PATH)
     return chat_service
 
 # 请求模型定义
